@@ -4,10 +4,10 @@ const path = require('path');
 const fs = require('fs');
 
 // Helper function to delete uploaded file if error occurs
+// Helper function to delete uploaded file if error occurs
 const deleteUploadedFile = (filePath) => {
-  if (filePath && fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-  }
+  // No-op for Cloudinary as files are handled there
+  // We could implement Cloudinary deletion here if needed
 };
 
 // Create a new event
@@ -30,8 +30,8 @@ exports.createEvent = async (req, res) => {
     // Validate required fields
     if (!title || !description || !category || !location || !start_date || !end_date || !registration_limit) {
       if (req.file) deleteUploadedFile(req.file.path);
-      return res.status(400).json({ 
-        error: 'Please provide all required fields: title, description, category, location, start_date, end_date, registration_limit' 
+      return res.status(400).json({
+        error: 'Please provide all required fields: title, description, category, location, start_date, end_date, registration_limit'
       });
     }
 
@@ -65,8 +65,8 @@ exports.createEvent = async (req, res) => {
     // Handle image upload
     let imagePath = null;
     if (req.file) {
-      // Store relative path for serving files
-      imagePath = `/uploads/events/${req.file.filename}`;
+      // Cloudinary returns the full URL in path
+      imagePath = req.file.path;
     }
 
     // Process tags if provided
@@ -152,10 +152,10 @@ exports.createEvent = async (req, res) => {
 
   } catch (error) {
     console.error('Create event error:', error);
-    
+
     // Delete uploaded file if there was an error
     if (req.file) deleteUploadedFile(req.file.path);
-    
+
     // Handle validation errors
     if (error.name === 'ValidationError') {
       const validationErrors = Object.values(error.errors).map(err => err.message);
@@ -294,8 +294,8 @@ exports.updateEvent = async (req, res) => {
     }
 
     // Check if user can update (creator or admin)
-    const canUpdate = event.created_by.toString() === req.user.id || 
-                     ['college_admin', 'super_admin'].includes(req.user.role);
+    const canUpdate = event.created_by.toString() === req.user.id ||
+      ['college_admin', 'super_admin'].includes(req.user.role);
 
     if (!canUpdate) {
       return res.status(403).json({ error: 'You can only update events you created' });
@@ -307,7 +307,7 @@ exports.updateEvent = async (req, res) => {
     }
 
     const allowedUpdates = [
-      'title', 'description', 'location', 'start_date', 'end_date', 
+      'title', 'description', 'location', 'start_date', 'end_date',
       'registration_limit', 'price', 'tags', 'registration_deadline'
     ];
 
@@ -322,11 +322,11 @@ exports.updateEvent = async (req, res) => {
     if (updates.start_date || updates.end_date) {
       const startDate = new Date(updates.start_date || event.start_date);
       const endDate = new Date(updates.end_date || event.end_date);
-      
+
       if (startDate <= new Date()) {
         return res.status(400).json({ error: 'Start date must be in the future' });
       }
-      
+
       if (endDate <= startDate) {
         return res.status(400).json({ error: 'End date must be after start date' });
       }
@@ -335,11 +335,10 @@ exports.updateEvent = async (req, res) => {
     // Handle new image upload
     if (req.file) {
       // Delete old image if exists
-      if (event.image) {
-        const oldImagePath = path.join(__dirname, '..', 'uploads', 'events', path.basename(event.image));
-        deleteUploadedFile(oldImagePath);
-      }
-      updates.image = `/uploads/events/${req.file.filename}`;
+      // Delete old image if exists
+      // Note: We're not deleting from Cloudinary here to keep it simple, 
+      // but you could add that logic using cloudinary.uploader.destroy
+      updates.image = req.file.path;
     }
 
     const updatedEvent = await Event.findByIdAndUpdate(
@@ -358,9 +357,9 @@ exports.updateEvent = async (req, res) => {
 
   } catch (error) {
     console.error('Update event error:', error);
-    
+
     if (req.file) deleteUploadedFile(req.file.path);
-    
+
     if (error.name === 'ValidationError') {
       const validationErrors = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({ error: validationErrors.join('. ') });
@@ -380,8 +379,8 @@ exports.deleteEvent = async (req, res) => {
     }
 
     // Check if user can delete (creator or admin)
-    const canDelete = event.created_by.toString() === req.user.id || 
-                     ['college_admin', 'super_admin'].includes(req.user.role);
+    const canDelete = event.created_by.toString() === req.user.id ||
+      ['college_admin', 'super_admin'].includes(req.user.role);
 
     if (!canDelete) {
       return res.status(403).json({ error: 'You can only delete events you created' });
@@ -393,10 +392,8 @@ exports.deleteEvent = async (req, res) => {
     }
 
     // Delete associated image file
-    if (event.image) {
-      const imagePath = path.join(__dirname, '..', 'uploads', 'events', path.basename(event.image));
-      deleteUploadedFile(imagePath);
-    }
+    // Delete associated image file
+    // Note: We're not deleting from Cloudinary here to keep it simple
 
     // Store event details before deletion for logging
     const eventTitle = event.title;
@@ -514,11 +511,11 @@ exports.getEventStats = async (req, res) => {
     // College admin only sees their own events and related registrations
     if (req.user.role === 'college_admin') {
       eventFilter.created_by = req.user.id;
-      
+
       // Get events created by this admin first
       const adminEvents = await Event.find({ created_by: req.user.id }).select('_id');
       const adminEventIds = adminEvents.map(event => event._id);
-      
+
       // Filter registrations to only include those for admin's events
       registrationFilter.event_id = { $in: adminEventIds };
     }

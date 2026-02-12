@@ -93,7 +93,9 @@ const StudentDashboard = () => {
           location: event.location,
           participants: event.current_registrations || 0,
           maxParticipants: event.registration_limit,
-          image: event.image ? `${API_BASE_URL.replace('/api', '')}${event.image}` : 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=400',
+          image: event.image
+            ? (event.image.startsWith('http') ? event.image : `${API_BASE_URL.replace('/api', '')}${event.image}`)
+            : 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=400',
           description: event.description,
           tags: event.tags || [],
           registrationDeadline: event.registration_deadline ?
@@ -281,10 +283,10 @@ const StudentDashboard = () => {
               onClick={() => handleRegister(event.id)}
               disabled={userEvents.some(e => e.id === event.id) || event.participants >= event.maxParticipants}
               className={`px-6 py-2 rounded-lg font-medium transition-colors ${userEvents.some(e => e.id === event.id)
-                  ? 'bg-green-100 text-green-700 cursor-not-allowed'
-                  : event.participants >= event.maxParticipants
-                    ? 'bg-red-100 text-red-700 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                : event.participants >= event.maxParticipants
+                  ? 'bg-red-100 text-red-700 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
             >
               {userEvents.some(e => e.id === event.id)
@@ -386,7 +388,9 @@ const StudentDashboard = () => {
                   location: reg.event_id.location,
                   participants: reg.event_id.current_registrations || 0,
                   maxParticipants: reg.event_id.registration_limit,
-                  image: reg.event_id.image ? `${API_BASE_URL.replace('/api', '')}${reg.event_id.image}` : 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=400',
+                  image: reg.event_id.image
+                    ? (reg.event_id.image.startsWith('http') ? reg.event_id.image : `${API_BASE_URL.replace('/api', '')}${reg.event_id.image}`)
+                    : 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=400',
                   description: reg.event_id.description,
                   tags: reg.event_id.tags || [],
                   registrationDeadline: reg.event_id.registration_deadline ?
@@ -463,7 +467,9 @@ const StudentDashboard = () => {
                 location: reg.event_id.location,
                 participants: reg.event_id.current_registrations || 0,
                 maxParticipants: reg.event_id.registration_limit,
-                image: reg.event_id.image ? `${API_BASE_URL.replace('/api', '')}${reg.event_id.image}` : 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=400',
+                image: reg.event_id.image
+                  ? (reg.event_id.image.startsWith('http') ? reg.event_id.image : `${API_BASE_URL.replace('/api', '')}${reg.event_id.image}`)
+                  : 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=400',
                 description: reg.event_id.description,
                 tags: reg.event_id.tags || [],
                 registrationDeadline: reg.event_id.registration_deadline ?
@@ -743,8 +749,8 @@ const StudentDashboard = () => {
                         }}
                         disabled={selectedEvent.participants >= selectedEvent.maxParticipants}
                         className={`px-12 py-6 rounded-2xl font-bold text-2xl transition-all transform hover:scale-105 shadow-lg ${selectedEvent.participants >= selectedEvent.maxParticipants
-                            ? 'bg-red-100 text-red-700 cursor-not-allowed border-2 border-red-300'
-                            : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-xl'
+                          ? 'bg-red-100 text-red-700 cursor-not-allowed border-2 border-red-300'
+                          : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-xl'
                           }`}
                       >
                         {selectedEvent.participants >= selectedEvent.maxParticipants ?
