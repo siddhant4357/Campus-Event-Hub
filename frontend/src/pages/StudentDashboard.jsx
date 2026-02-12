@@ -3,15 +3,15 @@ import { Calendar, Clock, MapPin, Users, Star, Filter, X, Trophy, CheckCircle } 
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom'; // Add useLocation
 import ProfileSettings from '../components/ProfileSettings';
-import { 
-  StudentMyRegistrations, 
-  StudentUpcomingEvents, 
-  StudentQuickStats, 
-  BrowseEvents, 
-  MyRegistrations, 
-  DashboardSection, 
+import {
+  StudentMyRegistrations,
+  StudentUpcomingEvents,
+  StudentQuickStats,
+  BrowseEvents,
+  MyRegistrations,
+  DashboardSection,
   ReviewSection,
-  HeaderSection 
+  HeaderSection
 } from '../components/student';
 import DownloadTicketButton from '../components/event-actions/DownloadTicket';
 import { API_BASE_URL } from '../config/api';
@@ -23,7 +23,7 @@ const StudentDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedDateFilter, setSelectedDateFilter] = useState('all');
+  const [selectedMonthFilter, setSelectedMonthFilter] = useState('all');
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showEventDetails, setShowEventDetails] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -34,11 +34,11 @@ const StudentDashboard = () => {
   const [events, setEvents] = useState([]);
   const token = localStorage.getItem('token');
   const dropdownRef = useRef(null);
-  
+
   // Pagination state for browse events
   const [browsePage, setBrowsePage] = useState(1);
   const BROWSE_EVENTS_PER_PAGE = 12;
-  
+
   // Define the categories array
   const categories = useMemo(() => [
     { id: 'all', name: 'All Categories' },
@@ -56,14 +56,14 @@ const StudentDashboard = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Build query parameters
       const queryParams = new URLSearchParams({
         upcoming: 'true',
         limit: '50',
         ...filters
       });
-      
+
       const response = await fetch(`${API_BASE_URL}/events?${queryParams}`, {
         method: 'GET',
         headers: {
@@ -71,13 +71,13 @@ const StudentDashboard = () => {
           'Authorization': `Bearer ${token}`
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch events');
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success && data.data && data.data.events) {
         // Transform backend data to match frontend expectations
         const transformedEvents = data.data.events.map(event => ({
@@ -86,9 +86,9 @@ const StudentDashboard = () => {
           college: event.college_name,
           category: event.category,
           date: event.start_date.split('T')[0], // Extract date part
-          time: new Date(event.start_date).toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
+          time: new Date(event.start_date).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
           }),
           location: event.location,
           participants: event.current_registrations || 0,
@@ -96,14 +96,14 @@ const StudentDashboard = () => {
           image: event.image ? `${API_BASE_URL.replace('/api', '')}${event.image}` : 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=400',
           description: event.description,
           tags: event.tags || [],
-          registrationDeadline: event.registration_deadline ? 
-            event.registration_deadline.split('T')[0] : 
+          registrationDeadline: event.registration_deadline ?
+            event.registration_deadline.split('T')[0] :
             event.start_date.split('T')[0],
           fee: event.price || 0,
           rating: event.rating?.average || 0,
           status: event.registration_open ? 'open' : 'closed'
         }));
-        
+
         setEvents(transformedEvents);
       }
     } catch (error) {
@@ -136,18 +136,23 @@ const StudentDashboard = () => {
   }, [selectedCategory, searchTerm, fetchEvents]);
 
   // Use useMemo for derived values
-  const uniqueDates = useMemo(() => [
-    ...new Set(events.map(event => new Date(event.date).toISOString().split("T")[0]))
-  ], [events]);
+  const uniqueMonths = useMemo(() => {
+    const months = new Set(events.map(event => {
+      const date = new Date(event.date);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    }));
+    return [...months].sort().reverse(); // Sort latest months first
+  }, [events]);
 
   // Use useMemo for filtered events
   const filteredEvents = useMemo(() => events.filter(event => {
-    const matchesDate =
-      selectedDateFilter === 'all' ||
-      new Date(event.date).toISOString().split("T")[0] === selectedDateFilter;
+    const eventMonth = new Date(event.date).toISOString().slice(0, 7); // Get YYYY-MM
+    const matchesMonth =
+      selectedMonthFilter === 'all' ||
+      eventMonth === selectedMonthFilter;
 
-    return matchesDate;
-  }), [events, selectedDateFilter]);
+    return matchesMonth;
+  }), [events, selectedMonthFilter]);
 
   // Paginate browse events
   const paginatedBrowseEvents = useMemo(() => {
@@ -200,7 +205,7 @@ const StudentDashboard = () => {
   };
 
   const getStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'open': return 'text-green-600 bg-green-100';
       case 'filling_fast': return 'text-orange-600 bg-orange-100';
       case 'closed': return 'text-red-600 bg-red-100';
@@ -209,7 +214,7 @@ const StudentDashboard = () => {
   };
 
   const getRegistrationStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'approved': return 'text-green-600 bg-green-100 border-green-300';
       case 'pending': return 'text-yellow-600 bg-yellow-100 border-yellow-300';
       case 'rejected': return 'text-red-600 bg-red-100 border-red-300';
@@ -234,7 +239,7 @@ const StudentDashboard = () => {
           {event.college}
         </div>
       </div>
-      
+
       <div className="p-6">
         <div className="flex items-start justify-between mb-3">
           <h3 className="text-xl font-bold text-gray-800 line-clamp-2">{event.title}</h3>
@@ -243,7 +248,7 @@ const StudentDashboard = () => {
             <span className="ml-1 text-sm font-medium">{event.rating}</span>
           </div>
         </div>
-        
+
         {event.tags && event.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
             {event.tags.map(tag => (
@@ -253,7 +258,7 @@ const StudentDashboard = () => {
             ))}
           </div>
         )}
-        
+
         <div className="space-y-2 mb-4 text-sm text-gray-600">
           <div className="flex items-center">
             <Calendar className="w-4 h-4 mr-2" />
@@ -268,26 +273,25 @@ const StudentDashboard = () => {
             <span>{event.participants}/{event.maxParticipants} registered</span>
           </div>
         </div>
-        
+
         <div className="flex items-center justify-between">
           <div className="text-lg font-bold text-green-600">₹{event.fee}</div>
           {showRegisterButton ? (
             <button
               onClick={() => handleRegister(event.id)}
               disabled={userEvents.some(e => e.id === event.id) || event.participants >= event.maxParticipants}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                userEvents.some(e => e.id === event.id)
+              className={`px-6 py-2 rounded-lg font-medium transition-colors ${userEvents.some(e => e.id === event.id)
                   ? 'bg-green-100 text-green-700 cursor-not-allowed'
                   : event.participants >= event.maxParticipants
-                  ? 'bg-red-100 text-red-700 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-              }`}
+                    ? 'bg-red-100 text-red-700 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
             >
-              {userEvents.some(e => e.id === event.id) 
-                ? 'Registered' 
+              {userEvents.some(e => e.id === event.id)
+                ? 'Registered'
                 : event.participants >= event.maxParticipants
-                ? 'Full'
-                : 'Register Now'
+                  ? 'Full'
+                  : 'Register Now'
               }
             </button>
           ) : (
@@ -314,7 +318,7 @@ const StudentDashboard = () => {
           <Calendar className="w-8 h-8 text-blue-200" />
         </div>
       </div>
-      
+
       <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-xl">
         <div className="flex items-center justify-between">
           <div>
@@ -324,7 +328,7 @@ const StudentDashboard = () => {
           <CheckCircle className="w-8 h-8 text-green-200" />
         </div>
       </div>
-      
+
       <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-xl">
         <div className="flex items-center justify-between">
           <div>
@@ -334,7 +338,7 @@ const StudentDashboard = () => {
           <Trophy className="w-8 h-8 text-purple-200" />
         </div>
       </div>
-      
+
     </div>
   );
 
@@ -346,19 +350,19 @@ const StudentDashboard = () => {
         try {
           const token = localStorage.getItem('token');
           if (!token) return;
-          
+
           console.log('Fetching user registrations...');
-          
+
           const response = await fetch(`${API_BASE_URL}/events/user/registrations`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
           });
-          
+
           if (response.ok) {
             const data = await response.json();
             console.log('Registration data received:', data);
-            
+
             if (data.success && data.data.registrations) {
               // Filter out registrations with null event_id and extract events from registrations
               const registeredEvents = data.data.registrations
@@ -375,9 +379,9 @@ const StudentDashboard = () => {
                   college: reg.event_id.college_name,
                   category: reg.event_id.category,
                   date: reg.event_id.start_date.split('T')[0],
-                  time: new Date(reg.event_id.start_date).toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
+                  time: new Date(reg.event_id.start_date).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit'
                   }),
                   location: reg.event_id.location,
                   participants: reg.event_id.current_registrations || 0,
@@ -385,15 +389,15 @@ const StudentDashboard = () => {
                   image: reg.event_id.image ? `${API_BASE_URL.replace('/api', '')}${reg.event_id.image}` : 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=400',
                   description: reg.event_id.description,
                   tags: reg.event_id.tags || [],
-                  registrationDeadline: reg.event_id.registration_deadline ? 
-                    reg.event_id.registration_deadline.split('T')[0] : 
+                  registrationDeadline: reg.event_id.registration_deadline ?
+                    reg.event_id.registration_deadline.split('T')[0] :
                     reg.event_id.start_date.split('T')[0],
                   fee: reg.event_id.price || 0,
                   status: reg.status, // Keep the actual registration status
                   registrationStatus: reg.status, // This should be 'pending', 'approved', or 'rejected'
                   registrationId: reg._id
                 }));
-              
+
               console.log('Processed registered events:', registeredEvents);
               setUserEvents(registeredEvents);
             }
@@ -402,7 +406,7 @@ const StudentDashboard = () => {
           console.error('Error fetching user registrations:', error);
         }
       };
-      
+
       fetchUserRegistrations();
     }
   }, [currentUser]); // Remove activeTab dependency - fetch on mount
@@ -423,19 +427,19 @@ const StudentDashboard = () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-        
+
         console.log('Refreshing user registrations...');
-        
+
         const response = await fetch(`${API_BASE_URL}/events/user/registrations`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           console.log('Registration data refreshed:', data);
-          
+
           if (data.success && data.data.registrations) {
             // Filter out registrations with null event_id and extract events from registrations
             const registeredEvents = data.data.registrations
@@ -452,9 +456,9 @@ const StudentDashboard = () => {
                 college: reg.event_id.college_name,
                 category: reg.event_id.category,
                 date: reg.event_id.start_date.split('T')[0],
-                time: new Date(reg.event_id.start_date).toLocaleTimeString('en-US', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
+                time: new Date(reg.event_id.start_date).toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit'
                 }),
                 location: reg.event_id.location,
                 participants: reg.event_id.current_registrations || 0,
@@ -462,15 +466,15 @@ const StudentDashboard = () => {
                 image: reg.event_id.image ? `${API_BASE_URL.replace('/api', '')}${reg.event_id.image}` : 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=400',
                 description: reg.event_id.description,
                 tags: reg.event_id.tags || [],
-                registrationDeadline: reg.event_id.registration_deadline ? 
-                  reg.event_id.registration_deadline.split('T')[0] : 
+                registrationDeadline: reg.event_id.registration_deadline ?
+                  reg.event_id.registration_deadline.split('T')[0] :
                   reg.event_id.start_date.split('T')[0],
                 fee: reg.event_id.price || 0,
-                status: reg.status, 
-                registrationStatus: reg.status, 
+                status: reg.status,
+                registrationStatus: reg.status,
                 registrationId: reg._id
               }));
-            
+
             console.log('Processed registered events:', registeredEvents);
             setUserEvents(registeredEvents);
           }
@@ -513,9 +517,9 @@ const StudentDashboard = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Show ProfileSettings if showSettings is true */}
         {showSettings && (
-          <ProfileSettings 
-            currentUser={currentUser} 
-            logout={logout} 
+          <ProfileSettings
+            currentUser={currentUser}
+            logout={logout}
             token={token}
             onBack={() => setShowSettings(false)}
           />
@@ -531,19 +535,19 @@ const StudentDashboard = () => {
             getRegistrationStatusColor={getRegistrationStatusColor}
           />
         )}
-        
+
         {!showSettings && activeTab === 'browse' && (
           <BrowseEvents
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
             selectedCategory={selectedCategory}
             setSelectedCategory={setSelectedCategory}
-            selectedDateFilter={selectedDateFilter}
-            setSelectedDateFilter={setSelectedDateFilter}
+            selectedMonthFilter={selectedMonthFilter}
+            setSelectedMonthFilter={setSelectedMonthFilter}
             browsePage={browsePage}
             setBrowsePage={setBrowsePage}
             categories={categories}
-            uniqueDates={uniqueDates}
+            uniqueMonths={uniqueMonths}
             loading={loading}
             error={error}
             fetchEvents={fetchEvents}
@@ -553,10 +557,10 @@ const StudentDashboard = () => {
             BROWSE_EVENTS_PER_PAGE={BROWSE_EVENTS_PER_PAGE}
           />
         )}
-        
+
         {!showSettings && activeTab === 'registered' && (
-          <MyRegistrations 
-            userEvents={userEvents} 
+          <MyRegistrations
+            userEvents={userEvents}
             onViewDetails={handleViewDetails}
             onBrowseEvents={() => setActiveTab('browse')}
             currentUser={currentUser}
@@ -567,7 +571,7 @@ const StudentDashboard = () => {
 
       {/* Event Details Modal */}
       {showEventDetails && selectedEvent && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{
             backgroundColor: 'rgba(17, 24, 39, 0.8)',
@@ -576,19 +580,19 @@ const StudentDashboard = () => {
           }}
           onClick={closeEventDetails}
         >
-          <div 
+          <div
             className="bg-white rounded-xl shadow-2xl w-full max-w-full h-[90vh] overflow-y-auto animate-fade-in mx-4"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header - Enhanced for full width */}
             <div className="relative h-80 lg:h-96">
-              <img 
-                src={selectedEvent.image} 
+              <img
+                src={selectedEvent.image}
                 alt={selectedEvent.title}
                 className="w-full h-full object-cover rounded-t-xl"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent rounded-t-xl"></div>
-              
+
               {/* Close button */}
               <button
                 onClick={closeEventDetails}
@@ -596,7 +600,7 @@ const StudentDashboard = () => {
               >
                 <X className="w-6 h-6 text-gray-800" />
               </button>
-              
+
               {/* Registration status badge */}
               {selectedEvent.registrationStatus && (
                 <div className={`absolute top-6 left-6 px-6 py-3 rounded-full font-bold text-lg backdrop-blur-sm border-2 shadow-lg ${getRegistrationStatusColor(selectedEvent.registrationStatus)}`}>
@@ -625,7 +629,7 @@ const StudentDashboard = () => {
                     <p className="text-sm font-semibold uppercase tracking-wide">Date & Time</p>
                   </div>
                   <p className="font-bold text-gray-900 text-lg">
-                    {new Date(selectedEvent.date).toLocaleDateString('en-US', { 
+                    {new Date(selectedEvent.date).toLocaleDateString('en-US', {
                       weekday: 'long',
                       year: 'numeric',
                       month: 'long',
@@ -634,7 +638,7 @@ const StudentDashboard = () => {
                   </p>
                   <p className="text-gray-600 font-medium">{selectedEvent.time}</p>
                 </div>
-                
+
                 <div className="bg-green-50 p-6 rounded-2xl border border-green-100">
                   <div className="flex items-center text-green-600 mb-3">
                     <MapPin className="w-6 h-6 mr-3" />
@@ -643,7 +647,7 @@ const StudentDashboard = () => {
                   <p className="font-bold text-gray-900 text-lg">{selectedEvent.location}</p>
                   <p className="text-gray-600 font-medium">{selectedEvent.college}</p>
                 </div>
-                
+
                 <div className="bg-purple-50 p-6 rounded-2xl border border-purple-100">
                   <div className="flex items-center text-purple-600 mb-3">
                     <Users className="w-6 h-6 mr-3" />
@@ -654,7 +658,7 @@ const StudentDashboard = () => {
                   </p>
                   <p className="text-gray-600 font-medium">Registered</p>
                 </div>
-                
+
                 <div className="bg-orange-50 p-6 rounded-2xl border border-orange-100">
                   <div className="flex items-center text-orange-600 mb-3">
                     <Trophy className="w-6 h-6 mr-3" />
@@ -738,14 +742,13 @@ const StudentDashboard = () => {
                           handleRegister(selectedEvent.id);
                         }}
                         disabled={selectedEvent.participants >= selectedEvent.maxParticipants}
-                        className={`px-12 py-6 rounded-2xl font-bold text-2xl transition-all transform hover:scale-105 shadow-lg ${
-                          selectedEvent.participants >= selectedEvent.maxParticipants
+                        className={`px-12 py-6 rounded-2xl font-bold text-2xl transition-all transform hover:scale-105 shadow-lg ${selectedEvent.participants >= selectedEvent.maxParticipants
                             ? 'bg-red-100 text-red-700 cursor-not-allowed border-2 border-red-300'
                             : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-xl'
-                        }`}
+                          }`}
                       >
-                        {selectedEvent.participants >= selectedEvent.maxParticipants ? 
-                          'Event Full - Registration Closed' : 
+                        {selectedEvent.participants >= selectedEvent.maxParticipants ?
+                          'Event Full - Registration Closed' :
                           'Register for This Event'
                         }
                       </button>
@@ -768,8 +771,8 @@ const StudentDashboard = () => {
                   <div className="w-2 h-8 bg-gradient-to-b from-yellow-500 to-orange-500 rounded-full mr-4"></div>
                   Event Reviews & Ratings
                 </h3>
-                <ReviewSection 
-                  eventId={selectedEvent.id} 
+                <ReviewSection
+                  eventId={selectedEvent.id}
                   currentUserId={currentUser?.id}
                   showForm={true}
                 />
